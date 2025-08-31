@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Image Hosting Gallery</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    h1 { color: #333; }
+    .gallery { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; }
+    .image-card { position: relative; }
+    .gallery img { width: 250px; height: 200px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s ease-in-out; }
+    .gallery img:hover { transform: scale(1.05); }
+    .delete-btn { position: absolute; top: 5px; right: 5px; background: red; color: white; border: none; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+    input[type="file"] { margin-top: 10px; }
+    button { margin-top: 10px; padding: 5px 15px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>📸 My Image Hosting Gallery</h1>
+
+  <form id="uploadForm">
+    <input type="file" name="image" id="imageInput" required />
+    <br />
+    <button type="submit">Upload Image</button>
+  </form>
+
+  <div id="gallery" class="gallery"></div>
+
+  <script>
+    async function loadImages() {
+      try {
+        const res = await fetch("/api/images");
+        const images = await res.json();
+
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "";
+
+        images.forEach(img => {
+          const card = document.createElement("div");
+          card.className = "image-card";
+
+          const imageElement = document.createElement("img");
+          imageElement.src = img.url;
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.innerText = "Delete";
+          deleteBtn.className = "delete-btn";
+          deleteBtn.onclick = async () => {
+            if(confirm("Are you sure you want to delete this image?")) {
+              try {
+                const delRes = await fetch(`/api/images/${img._id}`, { method: "DELETE" });
+                const delData = await delRes.json();
+                alert(delData.message);
+                loadImages();
+              } catch(err) {
+                console.error("Delete error:", err);
+              }
+            }
+          };
+
+          card.appendChild(imageElement);
+          card.appendChild(deleteBtn);
+          gallery.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Error loading images:", err);
+      }
+    }
+
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById("imageInput");
+      if (!fileInput.files[0]) return alert("Please select an image");
+
+      const formData = new FormData();
+      formData.append("image", fileInput.files[0]);
+
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        alert(data.message);
+        loadImages();
+        fileInput.value = "";
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
+    });
+
+    loadImages();
+  </script>
+</body>
+</html>
+
